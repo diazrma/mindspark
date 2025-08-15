@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>MindSpark – Onde suas ideias flutuam.</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+<style>
+body { margin:0; overflow:hidden; background:#111; font-family:sans-serif; color:white; }
+#canvas { display:block; }
+button.floatingBtn, #explodeSlow, #explodeNormal, #explodeFast, #instrBtn, #endVoteBtn {
+  position:fixed; bottom:20px; width:60px; height:60px; font-size:28px; display:flex; align-items:center; justify-content:center;
+  border-radius:50%; border:none; box-shadow:0 4px 10px rgba(0,0,0,0.3); cursor:pointer;
+}
+#floatingBtn { right:20px; background:#ff6f61; color:white; z-index:20; }
+#explodeSlow { right:90px; background:#28a745; color:white; z-index:20; }
+#explodeNormal { right:160px; background:#007bff; color:white; z-index:20; }
+#explodeFast { right:230px; background:#ffc107; color:white; z-index:20; }
+#instrBtn { right:300px; background:#17a2b8; color:white; z-index:20; }
+#endVoteBtn { right:370px; background:#dc3545; color:white; z-index:20; }
+.modal-content { background:#222; color:white; }
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<button id="floatingBtn" class="floatingBtn" title="Adicionar Ideia">💡</button>
+<button id="explodeSlow" title="Explosão lenta">🐢</button>
+<button id="explodeNormal" title="Explosão normal">⚡</button>
+<button id="explodeFast" title="Explosão rápida">🔥</button>
+<button id="instrBtn" title="Instruções">ℹ️</button>
+<button id="endVoteBtn" title="Encerrar votação">🏆</button>
+
+<!-- Modal adicionar ideia -->
+<div class="modal fade" id="ideaModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Nova Ideia</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="text" id="ideaTitle" class="form-control mb-2" placeholder="Título da ideia">
+        <textarea id="ideaDesc" class="form-control" placeholder="Descrição da ideia"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="addIdeaBtn">Adicionar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal visualizar ideia -->
+<div class="modal fade" id="viewIdeaModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="viewIdeaTitle">Título</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="viewIdeaDesc">Descrição</div>
+      <div class="modal-footer">
+        <button class="btn btn-success" id="increaseVoteBtn">Votar (+)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal instruções -->
+<div class="modal fade" id="instrModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Instruções de Uso</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <ul>
+          <li>Clique no botão 💡 para adicionar uma nova ideia.</li>
+          <li>Clique com <b>botão esquerdo</b> em uma bola para votar e aumentar seu tamanho.</li>
+          <li>Clique com <b>botão direito</b> em uma bola para apagar a ideia.</li>
+          <li>Clique com <b>botão do meio</b> para visualizar a ideia completa.</li>
+          <li>Use os botões de explosão 🐢 ⚡ 🔥 para alterar a velocidade das bolas.</li>
+          <li>Clique no botão 🏆 para encerrar a votação e manter apenas a ideia mais votada.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+tinymce.init({
+  selector:'#ideaDesc',
+  menubar:false,
+  plugins:'emoticons lists link',
+  toolbar:'bold italic underline | bullist numlist | link emoticons',
+  height:120,
+  skin:'oxide-dark',
+  content_css:'dark'
+});
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let nodes = JSON.parse(localStorage.getItem('nodes')) || [];
+let particles = [];
+let explosionSpeed = 5;
+const MAX_RADIUS = 100;
+
+function saveNodes(){ localStorage.setItem('nodes', JSON.stringify(nodes)); }
+
+function addNode(title, desc){
+  let node = {
+    x: Math.random()*(canvas.width-120)+60,
+    y: Math.random()*(canvas.height-120)+60,
+    vx: (Math.random()-0.5)*2,
+    vy: (Math.random()-0.5)*2,
+    baseRadius: 35 + Math.random()*10,
+    radius: 35 + Math.random()*10,
+    color: `hsl(${Math.random()*360},80%,60%)`,
+    title:title,
+    desc:desc,
+    votes:0
+  };
+  nodes.push(node);
+  saveNodes();
+  createParticles(node.x, node.y, 30, true);
+}
+
+document.getElementById('floatingBtn').onclick = ()=>{
+  new bootstrap.Modal(document.getElementById('ideaModal')).show();
+}
+
+document.getElementById('addIdeaBtn').onclick = ()=>{
+  const title = document.getElementById('ideaTitle').value.trim();
+  const editor = tinymce.get('ideaDesc');
+  const desc = editor ? editor.getContent().trim() : document.getElementById('ideaDesc').value.trim();
+  if(title && desc){
+    addNode(title, desc);
+    document.getElementById('ideaTitle').value='';
+    if(editor) editor.setContent('');
+    else document.getElementById('ideaDesc').value='';
+    new bootstrap.Modal(document.getElementById('ideaModal')).hide();
+  }
+}
+
+document.getElementById('explodeSlow').onclick = ()=>explodeNodes(2);
+document.getElementById('explodeNormal').onclick = ()=>explodeNodes(5);
+document.getElementById('explodeFast').onclick = ()=>explodeNodes(10);
+
+document.getElementById('endVoteBtn').onclick = ()=>{
+  if(nodes.length===0) return;
+  nodes.sort((a,b)=>b.votes-a.votes);
+  nodes = [nodes[0]];
+  saveNodes();
+}
+
+document.getElementById('instrBtn').onclick = ()=>{
+  new bootstrap.Modal(document.getElementById('instrModal')).show();
+}
+
+function createParticles(x,y,count,explosion=false){
+  for(let i=0;i<count;i++){
+    const speed = explosion ? (Math.random()*explosionSpeed - explosionSpeed/2) : (Math.random()-0.5)*3;
+    particles.push({x:x,y:y,vx:speed,vy:explosion ? (Math.random()*explosionSpeed - explosionSpeed/2) : (Math.random()-0.5)*3,alpha:1,radius:2+Math.random()*3,color:`hsl(${Math.random()*360},80%,60%)`});
+  }
+}
+
+function drawParticles(){
+  for(let i=particles.length-1;i>=0;i--){
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy;
+    p.alpha -= 0.03;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.radius,0,Math.PI*2);
+    ctx.fillStyle=`hsla(${Math.random()*360},80%,60%,${p.alpha})`;
+    ctx.fill();
+    if(p.alpha <= 0) particles.splice(i,1);
+  }
+}
+
+canvas.addEventListener('click', e=>{
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  nodes.forEach(n=>{
+    const dist = Math.hypot(n.x-mx,n.y-my);
+    if(dist<n.radius){
+      if(n.radius < MAX_RADIUS){
+        n.votes++;
+        n.radius = Math.min(n.baseRadius + n.votes*5, MAX_RADIUS);
+        createParticles(n.x,n.y,20,true);
+        saveNodes();
+      }
+    }
+  });
+});
+
+canvas.addEventListener('contextmenu', e=>{
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  nodes = nodes.filter(n=>{
+    const dist = Math.hypot(n.x-mx,n.y-my);
+    return dist>n.radius;
+  });
+  saveNodes();
+});
+
+canvas.addEventListener('auxclick', e=>{
+  if(e.button!==1) return;
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  nodes.forEach(n=>{
+    const dist = Math.hypot(n.x-mx,n.y-my);
+    if(dist<n.radius){
+      document.getElementById('viewIdeaTitle').innerHTML = n.title;
+      document.getElementById('viewIdeaDesc').innerHTML = n.desc;
+      new bootstrap.Modal(document.getElementById('viewIdeaModal')).show();
+    }
+  });
+});
+
+function animate(){
+  ctx.fillStyle='rgba(0,0,0,0.2)';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // Linhas entre bolas próximas
+  for(let i=0;i<nodes.length;i++){
+    for(let j=i+1;j<nodes.length;j++){
+      let a = nodes[i], b = nodes[j];
+      let dist = Math.hypot(a.x-b.x,a.y-b.y);
+      if(dist<200){
+        let alpha = 0.3*(1-dist/200);
+        ctx.strokeStyle=`rgba(255,255,255,${alpha})`;
+        ctx.lineWidth = 1+alpha*2;
+        ctx.beginPath();
+        ctx.moveTo(a.x,a.y);
+        ctx.lineTo(b.x,b.y);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // Desenhar bolas
+  nodes.forEach(n=>{
+    n.x += n.vx; n.y += n.vy;
+    if(n.x<n.radius||n.x>canvas.width-n.radius) n.vx*=-1;
+    if(n.y<n.radius||n.y>canvas.height-n.radius) n.vy*=-1;
+
+    let pulse = Math.sin(Date.now()/200)*2;
+    ctx.beginPath();
+    ctx.arc(n.x,n.y,n.radius+pulse,0,Math.PI*2);
+    ctx.fillStyle = n.color;
+    ctx.fill();
+
+    ctx.fillStyle='white';
+    ctx.font='bold 12px sans-serif';
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText(n.title,n.x,n.y);
+  });
+
+  drawParticles();
+  requestAnimationFrame(animate);
+}
+
+animate();
+</script>
+</body>
+</html>
