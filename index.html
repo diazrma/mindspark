@@ -90,7 +90,6 @@ button.floatingBtn, #explodeSlow, #explodeNormal, #explodeFast, #instrBtn, #endV
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
@@ -123,22 +122,27 @@ function addNode(title, desc){
 
 document.getElementById('floatingBtn').onclick = ()=>{
   new bootstrap.Modal(document.getElementById('ideaModal')).show();
-}
+};
 
-document.getElementById('addIdeaBtn').onclick = () => {
+document.getElementById('addIdeaBtn').onclick = ()=>{
   const title = document.getElementById('ideaTitle').value.trim();
   const desc = document.getElementById('ideaDesc').value.trim();
-
-  if (title && desc) {
+  if(title && desc){
     addNode(title, desc);
-
-    document.getElementById('ideaTitle').value = '';
-    document.getElementById('ideaDesc').value = '';
-
+    document.getElementById('ideaTitle').value='';
+    document.getElementById('ideaDesc').value='';
     bootstrap.Modal.getInstance(document.getElementById('ideaModal')).hide();
   }
 };
 
+function explodeNodes(speed) {
+  explosionSpeed = speed;
+  nodes.forEach(node => {
+    createParticles(node.x, node.y, 30, true);
+    node.vx = (Math.random() - 0.5) * speed;
+    node.vy = (Math.random() - 0.5) * speed;
+  });
+}
 
 document.getElementById('explodeSlow').onclick = ()=>explodeNodes(2);
 document.getElementById('explodeNormal').onclick = ()=>explodeNodes(5);
@@ -149,16 +153,23 @@ document.getElementById('endVoteBtn').onclick = ()=>{
   nodes.sort((a,b)=>b.votes-a.votes);
   nodes = [nodes[0]];
   saveNodes();
-}
+};
 
 document.getElementById('instrBtn').onclick = ()=>{
   new bootstrap.Modal(document.getElementById('instrModal')).show();
-}
+};
 
 function createParticles(x,y,count,explosion=false){
   for(let i=0;i<count;i++){
     const speed = explosion ? (Math.random()*explosionSpeed - explosionSpeed/2) : (Math.random()-0.5)*3;
-    particles.push({x:x,y:y,vx:speed,vy:explosion ? (Math.random()*explosionSpeed - explosionSpeed/2) : (Math.random()-0.5)*3,alpha:1,radius:2+Math.random()*3,color:`hsl(${Math.random()*360},80%,60%)`});
+    particles.push({
+      x:x, y:y,
+      vx:speed,
+      vy:explosion ? (Math.random()*explosionSpeed - explosionSpeed/2) : (Math.random()-0.5)*3,
+      alpha:1,
+      radius:2+Math.random()*3,
+      color:`hsl(${Math.random()*360},80%,60%)`
+    });
   }
 }
 
