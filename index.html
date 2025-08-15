@@ -125,18 +125,20 @@ document.getElementById('floatingBtn').onclick = ()=>{
   new bootstrap.Modal(document.getElementById('ideaModal')).show();
 }
 
-document.getElementById('addIdeaBtn').onclick = ()=>{
+document.getElementById('addIdeaBtn').onclick = () => {
   const title = document.getElementById('ideaTitle').value.trim();
-  const editor = tinymce.get('ideaDesc');
-  const desc = editor ? editor.getContent().trim() : document.getElementById('ideaDesc').value.trim();
-  if(title && desc){
+  const desc = document.getElementById('ideaDesc').value.trim();
+
+  if (title && desc) {
     addNode(title, desc);
-    document.getElementById('ideaTitle').value='';
-    if(editor) editor.setContent('');
-    else document.getElementById('ideaDesc').value='';
-    new bootstrap.Modal(document.getElementById('ideaModal')).hide();
+
+    document.getElementById('ideaTitle').value = '';
+    document.getElementById('ideaDesc').value = '';
+
+    bootstrap.Modal.getInstance(document.getElementById('ideaModal')).hide();
   }
-}
+};
+
 
 document.getElementById('explodeSlow').onclick = ()=>explodeNodes(2);
 document.getElementById('explodeNormal').onclick = ()=>explodeNodes(5);
