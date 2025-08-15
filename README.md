@@ -37,10 +37,6 @@ MindSpark é uma ferramenta de brainstorming digital que transforma ideias em **
 - Sistema de votação integrado diretamente nas bolas.  
 - Ferramenta totalmente **frontend**, sem necessidade de backend.
 
-## Capturas
-
-*(Aqui você pode adicionar screenshots ou GIFs da aplicação)*
-
 ## Licença
 
 Este projeto está sob a **MIT License**.  
